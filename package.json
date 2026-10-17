@@ -1,0 +1,23 @@
+{
+  "name": "easylearn-monorepo",
+  "version": "1.0.0",
+  "description": "EasyLearn Platform Monorepo - React Client and Node.js Express Server",
+  "private": true,
+  "scripts": {
+    "dev:server": "npm --prefix server run dev",
+    "dev:client": "npm --prefix client run dev",
+    "test:server": "npm --prefix server test",
+    "test:client": "npm --prefix client test",
+    "test": "npm run test:server && npm run test:client"
+  },
+  "keywords": [
+    "education",
+    "worksheets",
+    "react",
+    "express",
+    "prisma",
+    "postgresql"
+  ],
+  "author": "Nehorai Maimon",
+  "license": "ISC"
+}

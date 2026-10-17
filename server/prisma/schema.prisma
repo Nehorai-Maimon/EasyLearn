@@ -1,0 +1,130 @@
+// Prisma Schema for EasyLearn Platform
+// Database: PostgreSQL
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// User roles definition: ADMIN for the teacher/mom and creators, CUSTOMER for teachers & parents purchasing
+enum Role {
+  ADMIN
+  CUSTOMER
+}
+
+// Publishing status for worksheets
+enum SheetStatus {
+  ACTIVE
+  DRAFT
+  ARCHIVED
+}
+
+// Lifecycle status for orders
+enum OrderStatus {
+  PENDING
+  COMPLETED
+  REFUNDED
+}
+
+// User model for authentication and role-based permissions
+model User {
+  id           String      @id @default(uuid())
+  email        String      @unique
+  name         String
+  passwordHash String?
+  role         Role        @default(CUSTOMER)
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  // Worksheets created by this user (applicable if role is ADMIN)
+  createdWorksheets Worksheet[] @relation("TeacherWorksheets")
+
+  // Orders completed by this user (purchases in the customer personal area)
+  orders            Order[]
+
+  @@map("users")
+}
+
+// Category model for organizing worksheets by educational domains
+model Category {
+  id          String      @id @default(uuid())
+  name        String      @unique // e.g., "חשבון והנדסה", "עברית ולשון", "חגים ומועדים"
+  slug        String      @unique
+  description String?
+  worksheets  Worksheet[]
+
+  @@map("categories")
+}
+
+// Core worksheet entity representing learning materials for sale
+model Worksheet {
+  id             String      @id @default(uuid())
+  title          String
+  description    String
+  grade          String      // e.g., "גן חובה", "כיתה א'", "כיתה ב'", "כיתה ג'-ד'"
+  subject        String      // e.g., "חשבון", "שפה", "תנ\"ך", "מדעים"
+  price          Float
+  originalPrice  Float?
+  fileUrl        String?     // Secure storage URL for full PDF/Word document
+  previewUrl     String?     // Watermarked thumbnail/sample page
+  hasAnswerKey   Boolean     @default(false)
+  isBundle       Boolean     @default(false)
+  pageCount      Int         @default(1)
+  downloadsCount Int         @default(0)
+  status         SheetStatus @default(ACTIVE)
+
+  // Author reference (Teacher/Admin)
+  teacherId      String
+  teacher        User        @relation("TeacherWorksheets", fields: [teacherId], references: [id], onDelete: Cascade)
+
+  // Category reference
+  categoryId     String?
+  category       Category?   @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+
+  // Order items relation
+  orderItems     OrderItem[]
+
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  @@map("worksheets")
+}
+
+// Order model for tracking customer purchases and granting download rights
+model Order {
+  id          String      @id @default(uuid())
+  orderNumber String      @unique
+  totalAmount Float
+  status      OrderStatus @default(COMPLETED)
+
+  // Customer reference
+  customerId  String
+  customer    User        @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  // Purchased items
+  items       OrderItem[]
+
+  createdAt   DateTime    @default(now())
+
+  @@map("orders")
+}
+
+// Join table for order items with historical price snapshots
+model OrderItem {
+  id              String    @id @default(uuid())
+  priceAtPurchase Float
+
+  // Order reference
+  orderId         String
+  order           Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  // Worksheet reference
+  worksheetId     String
+  worksheet       Worksheet @relation(fields: [worksheetId], references: [id], onDelete: Cascade)
+
+  @@map("order_items")
+}
