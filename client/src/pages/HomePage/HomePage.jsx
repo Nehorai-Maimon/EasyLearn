@@ -11,45 +11,84 @@ import {
   Chip,
   TextField,
   Button,
-  InputAdornment,
   Paper,
   Stack
 } from '@mui/material';
-import SearchIcon from '@mui/icons-material/Search';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import AddShoppingCartIcon from '@mui/icons-material/AddShoppingCart';
 import WorkspacePremiumIcon from '@mui/icons-material/WorkspacePremium';
 import ScienceIcon from '@mui/icons-material/Science';
 
-const SCIENCE_SUBTOPICS = [
-  { id: 'all', label: 'כל תתי הנושאים במדעים' },
-  { id: 'גוף האדם ובריאות', label: 'גוף האדם ובריאות 🫀' },
-  { id: 'בעלי חיים ומערכות אקולוגיות', label: 'בעלי חיים ואקולוגיה 🐾' },
-  { id: 'צמחים ותהליכי צמיחה', label: 'צמחים ופוטוסינתזה 🌿' },
-  { id: 'חומרים ותכונותיהם', label: 'חומרים ומצבי צבירה 🧪' },
-  { id: 'כדור הארץ ומזג אוויר', label: 'מזג אוויר ועונות 🌤️' },
-  { id: 'אנרגיה וטכנולוגיה', label: 'אנרגיה וחשמל ⚡' }
+const DEFAULT_CATEGORIES = [
+  {
+    id: 'cat-sci',
+    name: 'מדעים',
+    slug: 'science',
+    icon: '🔬',
+    subtopics: [
+      'גוף האדם ובריאות',
+      'בעלי חיים ומערכות אקולוגיות',
+      'צמחים ותהליכי צמיחה',
+      'חומרים ותכונותיהם',
+      'כדור הארץ ומזג אוויר',
+      'אנרגיה וטכנולוגיה'
+    ]
+  },
+  {
+    id: 'cat-math',
+    name: 'חשבון והנדסה',
+    slug: 'math',
+    icon: '📐',
+    subtopics: ['שברים', 'חיבור וחיסור', 'כפל וחילוק', 'גאומטריה ומדידות']
+  },
+  {
+    id: 'cat-heb',
+    name: 'עברית ולשון',
+    slug: 'hebrew',
+    icon: '📖',
+    subtopics: ['מוכנות לקריאה', 'הבנת הנקרא', 'דקדוק ופעלים', 'כתיבה יצירתית']
+  },
+  {
+    id: 'cat-holidays',
+    name: 'חגים ומועדים',
+    slug: 'holidays',
+    icon: '🍎',
+    subtopics: ['חגי תשרי', 'חנוכה', 'פורים', 'פסח', 'שבועות']
+  }
 ];
 
 /**
  * Material-UI Public Storefront
- * Highlighting Science primary category with rich subtopics
+ * Renders worksheets catalog dynamically according to admin-defined categories & subtopics
  */
-export default function HomePage({ worksheets = [], onAddToCart, onPreview }) {
+export default function HomePage({
+  worksheets = [],
+  categories = DEFAULT_CATEGORIES,
+  onAddToCart,
+  onPreview
+}) {
   const [selectedGrade, setSelectedGrade] = useState('all');
   const [selectedSubject, setSelectedSubject] = useState('all');
   const [selectedSubTopic, setSelectedSubTopic] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
 
+  // Selected category for dynamic subtopics
+  const currentCategory = categories.find(c => c.name === selectedSubject);
+  const activeSubtopics = currentCategory ? currentCategory.subtopics : [];
+
+  // Filter worksheets: only show active worksheets (or worksheets without DRAFT status)
   const filteredSheets = worksheets.filter(sheet => {
+    if (sheet.status === 'DRAFT') return false;
+
     const matchesGrade = selectedGrade === 'all' || sheet.grade.includes(selectedGrade);
     const matchesSubject = selectedSubject === 'all' || sheet.subject === selectedSubject;
     const matchesSubTopic = selectedSubTopic === 'all' || sheet.subSubject === selectedSubTopic;
     const matchesSearch = !searchQuery || 
       sheet.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      sheet.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (sheet.description && sheet.description.toLowerCase().includes(searchQuery.toLowerCase())) ||
       (sheet.subSubject && sheet.subSubject.toLowerCase().includes(searchQuery.toLowerCase()));
+
     return matchesGrade && matchesSubject && matchesSubTopic && matchesSearch;
   });
 
@@ -107,50 +146,63 @@ export default function HomePage({ worksheets = [], onAddToCart, onPreview }) {
           sx={{ mb: 2.5, bgcolor: '#f8fafc', borderRadius: 2 }}
         />
 
-        {/* Primary Subject Selection */}
+        {/* Primary Subject Selection from live categories */}
         <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 1, mb: 2 }}>
           <Typography variant="body2" sx={{ fontWeight: 800, minWidth: 90, color: 'text.secondary' }}>
             מקצוע ראשי:
           </Typography>
-          {[
-            { id: 'all', label: 'כל המקצועות' },
-            { id: 'מדעים', label: '🔬 מדעים (התמחות ראשית)' },
-            { id: 'חשבון והנדסה', label: '📐 חשבון והנדסה' },
-            { id: 'עברית ולשון', label: '📖 עברית ולשון' },
-            { id: 'חגים ומועדים', label: '🍎 חגים ועונות' }
-          ].map(s => (
+          <Chip
+            label="כל המקצועות"
+            clickable
+            onClick={() => {
+              setSelectedSubject('all');
+              setSelectedSubTopic('all');
+            }}
+            color={selectedSubject === 'all' ? 'primary' : 'default'}
+            variant={selectedSubject === 'all' ? 'filled' : 'outlined'}
+            sx={{ fontWeight: 800 }}
+          />
+          {categories.map(s => (
             <Chip
               key={s.id}
-              label={s.label}
+              label={`${s.icon || '📚'} ${s.name}`}
               clickable
               onClick={() => {
-                setSelectedSubject(s.id);
+                setSelectedSubject(s.name);
                 setSelectedSubTopic('all');
               }}
-              color={selectedSubject === s.id ? 'primary' : 'default'}
-              variant={selectedSubject === s.id ? 'filled' : 'outlined'}
+              color={selectedSubject === s.name ? 'primary' : 'default'}
+              variant={selectedSubject === s.name ? 'filled' : 'outlined'}
               sx={{ fontWeight: 800 }}
             />
           ))}
         </Box>
 
-        {/* Science Subtopics (Visible when Science is selected) */}
-        {selectedSubject === 'מדעים' && (
+        {/* Dynamic Subtopics for Selected Category */}
+        {selectedSubject !== 'all' && activeSubtopics.length > 0 && (
           <Box sx={{ p: 2, bgcolor: '#f0fdf4', borderRadius: 3, border: '1px solid #bbf7d0', mb: 2 }}>
             <Typography variant="caption" sx={{ fontWeight: 900, color: '#166534', display: 'block', mb: 1 }}>
-              תחומי תוכן במדעים:
+              תחומי תוכן ב{selectedSubject}:
             </Typography>
             <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-              {SCIENCE_SUBTOPICS.map(sub => (
+              <Chip
+                label="כל תתי הנושאים"
+                clickable
+                size="small"
+                onClick={() => setSelectedSubTopic('all')}
+                color={selectedSubTopic === 'all' ? 'success' : 'default'}
+                variant={selectedSubTopic === 'all' ? 'filled' : 'outlined'}
+              />
+              {activeSubtopics.map(sub => (
                 <Chip
-                  key={sub.id}
-                  label={sub.label}
+                  key={sub}
+                  label={sub}
                   clickable
                   size="small"
-                  onClick={() => setSelectedSubTopic(sub.id)}
-                  color={selectedSubTopic === sub.id ? 'success' : 'default'}
-                  variant={selectedSubTopic === sub.id ? 'filled' : 'outlined'}
-                  sx={{ fontWeight: 700, bgcolor: selectedSubTopic === sub.id ? 'success.main' : 'white' }}
+                  onClick={() => setSelectedSubTopic(sub)}
+                  color={selectedSubTopic === sub ? 'success' : 'default'}
+                  variant={selectedSubTopic === sub ? 'filled' : 'outlined'}
+                  sx={{ fontWeight: 700, bgcolor: selectedSubTopic === sub ? 'success.main' : 'white' }}
                 />
               ))}
             </Box>
@@ -206,13 +258,13 @@ export default function HomePage({ worksheets = [], onAddToCart, onPreview }) {
         <Grid container spacing={3}>
           {filteredSheets.map(sheet => (
             <Grid size={{ xs: 12, sm: 6, md: 4 }} key={sheet.id}>
-              <Card sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+              <Card sx={{ display: 'flex', flexDirection: 'column', height: '100%', borderRadius: 3 }}>
                 {/* Image and Watermark */}
                 <Box sx={{ position: 'relative', height: 200, bgcolor: '#f1f5f9' }}>
                   <CardMedia
                     component="img"
                     height="200"
-                    image={sheet.previewUrl}
+                    image={sheet.previewUrl || 'https://images.unsplash.com/photo-1532094349884-543bc11b234d?auto=format&fit=crop&w=600&q=80'}
                     alt={sheet.title}
                     sx={{ objectFit: 'cover' }}
                   />
@@ -273,7 +325,7 @@ export default function HomePage({ worksheets = [], onAddToCart, onPreview }) {
 
                 {/* Card Content */}
                 <CardContent sx={{ flexGrow: 1, p: 2.5 }}>
-                  <Stack direction="row" spacing={1} sx={{ mb: 1 }}>
+                  <Stack direction="row" spacing={1} sx={{ mb: 1, flexWrap: 'wrap', gap: 0.5 }}>
                     <Chip label={sheet.subject} size="small" color="primary" sx={{ fontWeight: 800 }} />
                     {sheet.subSubject && (
                       <Chip label={sheet.subSubject} size="small" variant="outlined" color="success" sx={{ fontWeight: 700 }} />

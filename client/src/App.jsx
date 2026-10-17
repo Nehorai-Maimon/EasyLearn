@@ -6,7 +6,21 @@ import CustomerDashboardPage from './pages/CustomerDashboardPage/CustomerDashboa
 import AdminDashboardPage from './pages/AdminDashboardPage/AdminDashboardPage';
 import CartModal from './components/CartModal/CartModal';
 import WorksheetPreviewModal from './components/WorksheetPreviewModal/WorksheetPreviewModal';
-import { getWorksheets, getCustomerLibrary, submitOrder, createWorksheet, updateWorksheet } from './services/api';
+import {
+  getWorksheets,
+  getCustomerLibrary,
+  submitOrder,
+  createWorksheet,
+  updateWorksheet,
+  reorderWorksheets,
+  deleteWorksheet,
+  getCategories,
+  createCategory,
+  updateCategory,
+  deleteCategory,
+  addSubtopic,
+  deleteSubtopic
+} from './services/api';
 
 /**
  * Root Application Component with Material-UI
@@ -15,15 +29,17 @@ import { getWorksheets, getCustomerLibrary, submitOrder, createWorksheet, update
 export default function App() {
   const [currentView, setCurrentView] = useState('store'); // 'store' | 'customer' | 'admin'
   const [worksheets, setWorksheets] = useState([]);
+  const [categories, setCategories] = useState([]);
   const [cart, setCart] = useState([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [previewSheet, setPreviewSheet] = useState(null);
   const [customerLibrary, setCustomerLibrary] = useState([]);
   const [customerEmail, setCustomerEmail] = useState('teacher@school.edu.il');
 
-  // Load worksheets and customer library on mount
+  // Load worksheets, categories and customer library on mount
   useEffect(() => {
     async function loadData() {
+      // Load Worksheets
       const sheets = await getWorksheets();
       if (sheets && sheets.length > 0) {
         setWorksheets(sheets);
@@ -44,7 +60,8 @@ export default function App() {
             isBundle: false,
             pageCount: 4,
             downloadsCount: 189,
-            viewsCount: 940
+            viewsCount: 940,
+            status: 'ACTIVE'
           },
           {
             id: 'ws-sci-2',
@@ -60,7 +77,8 @@ export default function App() {
             isBundle: false,
             pageCount: 3,
             downloadsCount: 165,
-            viewsCount: 780
+            viewsCount: 780,
+            status: 'ACTIVE'
           },
           {
             id: 'ws-sci-3',
@@ -76,7 +94,8 @@ export default function App() {
             isBundle: false,
             pageCount: 5,
             downloadsCount: 140,
-            viewsCount: 690
+            viewsCount: 690,
+            status: 'ACTIVE'
           },
           {
             id: 'ws-sci-5',
@@ -92,7 +111,8 @@ export default function App() {
             isBundle: true,
             pageCount: 12,
             downloadsCount: 230,
-            viewsCount: 1150
+            viewsCount: 1150,
+            status: 'ACTIVE'
           },
           {
             id: 'ws-1',
@@ -108,11 +128,19 @@ export default function App() {
             isBundle: false,
             pageCount: 4,
             downloadsCount: 142,
-            viewsCount: 620
+            viewsCount: 620,
+            status: 'ACTIVE'
           }
         ]);
       }
 
+      // Load Categories
+      const cats = await getCategories();
+      if (cats && cats.length > 0) {
+        setCategories(cats);
+      }
+
+      // Load Customer Library
       const library = await getCustomerLibrary(customerEmail);
       if (library && library.length > 0) {
         setCustomerLibrary(library);
@@ -185,6 +213,98 @@ export default function App() {
     }
   };
 
+  // Admin: Update full worksheet
+  const handleUpdateWorksheet = async (id, updateData) => {
+    setWorksheets(prev => prev.map(s => s.id === id ? { ...s, ...updateData } : s));
+    try {
+      await updateWorksheet(id, updateData);
+    } catch (err) {
+      console.warn('Worksheet updated locally');
+    }
+  };
+
+  // Admin: Reorder worksheets
+  const handleReorderWorksheets = async (newOrderedList) => {
+    setWorksheets(newOrderedList);
+    try {
+      const orderedIds = newOrderedList.map(s => s.id);
+      await reorderWorksheets(orderedIds);
+    } catch (err) {
+      console.warn('Reorder stored locally');
+    }
+  };
+
+  // Admin: Delete worksheet
+  const handleDeleteWorksheet = async (id) => {
+    setWorksheets(prev => prev.filter(s => s.id !== id));
+    try {
+      await deleteWorksheet(id);
+    } catch (err) {
+      console.warn('Delete processed locally');
+    }
+  };
+
+  // Admin: Add Category
+  const handleAddCategory = async (catData) => {
+    try {
+      const created = await createCategory(catData);
+      setCategories(prev => [...prev, created || { ...catData, id: `cat-${Date.now()}` }]);
+    } catch (err) {
+      setCategories(prev => [...prev, { ...catData, id: `cat-${Date.now()}` }]);
+    }
+  };
+
+  // Admin: Update Category
+  const handleUpdateCategory = async (id, updateData) => {
+    setCategories(prev => prev.map(c => c.id === id ? { ...c, ...updateData } : c));
+    try {
+      await updateCategory(id, updateData);
+    } catch (err) {
+      console.warn('Category update local fallback');
+    }
+  };
+
+  // Admin: Delete Category
+  const handleDeleteCategory = async (id) => {
+    setCategories(prev => prev.filter(c => c.id !== id));
+    try {
+      await deleteCategory(id);
+    } catch (err) {
+      console.warn('Category delete local fallback');
+    }
+  };
+
+  // Admin: Add Subtopic
+  const handleAddSubtopic = async (catId, subtopic) => {
+    setCategories(prev => prev.map(c => {
+      if (c.id === catId) {
+        const subs = c.subtopics || [];
+        return { ...c, subtopics: subs.includes(subtopic) ? subs : [...subs, subtopic] };
+      }
+      return c;
+    }));
+    try {
+      await addSubtopic(catId, subtopic);
+    } catch (err) {
+      console.warn('Subtopic added locally');
+    }
+  };
+
+  // Admin: Delete Subtopic
+  const handleDeleteSubtopic = async (catId, subtopic) => {
+    setCategories(prev => prev.map(c => {
+      if (c.id === catId) {
+        return { ...c, subtopics: (c.subtopics || []).filter(s => s !== subtopic) };
+      }
+      return c;
+    }));
+    try {
+      await deleteSubtopic(catId, subtopic);
+    } catch (err) {
+      console.warn('Subtopic deleted locally');
+    }
+  };
+
   return (
     <Box sx={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', bgcolor: 'background.default' }}>
       {/* Top Navigation */}
@@ -200,6 +320,7 @@ export default function App() {
         {currentView === 'store' && (
           <HomePage
             worksheets={worksheets}
+            categories={categories}
             onAddToCart={handleAddToCart}
             onPreview={setPreviewSheet}
           />
@@ -215,8 +336,17 @@ export default function App() {
         {currentView === 'admin' && (
           <AdminDashboardPage
             worksheets={worksheets}
+            categories={categories}
             onAddWorksheet={handleAddWorksheet}
             onUpdatePrice={handleUpdatePrice}
+            onUpdateWorksheet={handleUpdateWorksheet}
+            onReorderWorksheets={handleReorderWorksheets}
+            onDeleteWorksheet={handleDeleteWorksheet}
+            onAddCategory={handleAddCategory}
+            onUpdateCategory={handleUpdateCategory}
+            onDeleteCategory={handleDeleteCategory}
+            onAddSubtopic={handleAddSubtopic}
+            onDeleteSubtopic={handleDeleteSubtopic}
           />
         )}
       </Box>

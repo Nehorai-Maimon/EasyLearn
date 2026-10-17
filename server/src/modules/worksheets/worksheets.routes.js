@@ -9,6 +9,8 @@ router.get('/:id', worksheetsController.getWorksheet);
 
 // Admin management routes
 router.post('/', worksheetsController.addWorksheet);
+router.put('/reorder', worksheetsController.reorderWorksheets);
 router.put('/:id', worksheetsController.editWorksheet);
+router.delete('/:id', worksheetsController.removeWorksheet);
 
 export default router;

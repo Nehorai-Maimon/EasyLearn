@@ -65,6 +65,136 @@ export async function updateWorksheet(id, updateData) {
 }
 
 /**
+ * Reorder worksheets in the catalog (Admin action)
+ */
+export async function reorderWorksheets(orderedIds) {
+  const response = await fetch(`${API_BASE_URL}/worksheets/reorder`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ orderedIds })
+  });
+  if (!response.ok) throw new Error('Failed to reorder worksheets');
+  const result = await response.json();
+  return result.data;
+}
+
+/**
+ * Delete a worksheet from catalog (Admin action)
+ */
+export async function deleteWorksheet(id) {
+  const response = await fetch(`${API_BASE_URL}/worksheets/${id}`, {
+    method: 'DELETE'
+  });
+  if (!response.ok) throw new Error('Failed to delete worksheet');
+  return true;
+}
+
+/**
+ * Categories & Subtopics API
+ */
+export async function getCategories() {
+  try {
+    const response = await fetch(`${API_BASE_URL}/categories`);
+    if (!response.ok) throw new Error('Failed to fetch categories');
+    const result = await response.json();
+    return result.data || [];
+  } catch (error) {
+    console.warn('[API Warning] Categories fallback:', error.message);
+    return [
+      {
+        id: 'cat-sci',
+        name: 'מדעים',
+        slug: 'science',
+        icon: '🔬',
+        description: 'מדעי הטבע, גוף האדם, עולם החי והצומח, פיזיקה ומזג אוויר',
+        subtopics: [
+          'גוף האדם ובריאות',
+          'בעלי חיים ומערכות אקולוגיות',
+          'צמחים ותהליכי צמיחה',
+          'חומרים ותכונותיהם',
+          'כדור הארץ ומזג אוויר',
+          'אנרגיה וטכנולוגיה'
+        ]
+      },
+      {
+        id: 'cat-math',
+        name: 'חשבון והנדסה',
+        slug: 'math',
+        icon: '📐',
+        description: 'מיומנויות מתמטיות, פעולות חשבון, שברים וגאומטריה',
+        subtopics: ['שברים', 'חיבור וחיסור', 'כפל וחילוק', 'גאומטריה ומדידות']
+      },
+      {
+        id: 'cat-heb',
+        name: 'עברית ולשון',
+        slug: 'hebrew',
+        icon: '📖',
+        description: 'מודעות פונולוגית, הבנת הנקרא, דקדוק והבעה',
+        subtopics: ['מוכנות לקריאה', 'הבנת הנקרא', 'דקדוק ופעלים', 'כתיבה יצירתית']
+      },
+      {
+        id: 'cat-holidays',
+        name: 'חגים ומועדים',
+        slug: 'holidays',
+        icon: '🍎',
+        description: 'דפי פעילות עונתיים, מסורת ישראל ולוח השנה העברי',
+        subtopics: ['חגי תשרי', 'חנוכה', 'פורים', 'פסח', 'שבועות']
+      }
+    ];
+  }
+}
+
+export async function createCategory(catData) {
+  const response = await fetch(`${API_BASE_URL}/categories`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(catData)
+  });
+  if (!response.ok) throw new Error('Failed to create category');
+  const result = await response.json();
+  return result.data;
+}
+
+export async function updateCategory(id, updateData) {
+  const response = await fetch(`${API_BASE_URL}/categories/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(updateData)
+  });
+  if (!response.ok) throw new Error('Failed to update category');
+  const result = await response.json();
+  return result.data;
+}
+
+export async function deleteCategory(id) {
+  const response = await fetch(`${API_BASE_URL}/categories/${id}`, {
+    method: 'DELETE'
+  });
+  if (!response.ok) throw new Error('Failed to delete category');
+  return true;
+}
+
+export async function addSubtopic(catId, subtopic) {
+  const response = await fetch(`${API_BASE_URL}/categories/${catId}/subtopics`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ subtopic })
+  });
+  if (!response.ok) throw new Error('Failed to add subtopic');
+  const result = await response.json();
+  return result.data;
+}
+
+export async function deleteSubtopic(catId, subtopic) {
+  const response = await fetch(`${API_BASE_URL}/categories/${catId}/subtopics/${encodeURIComponent(subtopic)}`, {
+    method: 'DELETE'
+  });
+  if (!response.ok) throw new Error('Failed to delete subtopic');
+  const result = await response.json();
+  return result.data;
+}
+
+/**
  * Fetch customer library ("My Worksheets")
  */
 export async function getCustomerLibrary(email = '') {

@@ -198,6 +198,30 @@ export const worksheetsService = {
     return worksheetsStore[index];
   },
 
+  async reorderWorksheets(orderedIds = []) {
+    if (!Array.isArray(orderedIds) || orderedIds.length === 0) {
+      return [...worksheetsStore];
+    }
+
+    const orderMap = new Map();
+    orderedIds.forEach((id, idx) => orderMap.set(id, idx));
+
+    worksheetsStore.sort((a, b) => {
+      const orderA = orderMap.has(a.id) ? orderMap.get(a.id) : 99999;
+      const orderB = orderMap.has(b.id) ? orderMap.get(b.id) : 99999;
+      return orderA - orderB;
+    });
+
+    return [...worksheetsStore];
+  },
+
+  async deleteWorksheet(id) {
+    const index = worksheetsStore.findIndex(item => item.id === id);
+    if (index === -1) return false;
+    worksheetsStore.splice(index, 1);
+    return true;
+  },
+
   /**
    * Analytics: Generates a Heatmap of Subject and Subtopic Views
    * Shows which science topics & subjects have the highest user demand

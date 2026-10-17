@@ -45,4 +45,38 @@ describe('Worksheets API Endpoints', () => {
     expect(response.body.data.title).toBe(newSheet.title);
     expect(response.body.data.subSubject).toBe(newSheet.subSubject);
   });
+
+  it('should reorder worksheets according to orderedIds', async () => {
+    const listRes = await request(app).get('/api/worksheets');
+    const ids = listRes.body.data.map(item => item.id);
+    const reversedIds = [...ids].reverse();
+
+    const response = await request(app)
+      .put('/api/worksheets/reorder')
+      .send({ orderedIds: reversedIds });
+
+    expect(response.status).toBe(200);
+    expect(response.body.success).toBe(true);
+    expect(response.body.data[0].id).toBe(reversedIds[0]);
+  });
+
+  it('should delete a worksheet', async () => {
+    // Create a temporary worksheet to delete
+    const createRes = await request(app)
+      .post('/api/worksheets')
+      .send({
+        title: "דף זמני למחיקה",
+        grade: "כיתה א",
+        subject: "מדעים",
+        price: 10
+      });
+
+    const tempId = createRes.body.data.id;
+    const deleteRes = await request(app).delete(`/api/worksheets/${tempId}`);
+    expect(deleteRes.status).toBe(200);
+    expect(deleteRes.body.success).toBe(true);
+
+    const checkRes = await request(app).get(`/api/worksheets/${tempId}`);
+    expect(checkRes.status).toBe(404);
+  });
 });
