@@ -9,6 +9,8 @@ coverage/
 # Production
 build/
 dist/
+.vite/
+client/.vite/
 
 # Environment variables
 .env
